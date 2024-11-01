@@ -1,3 +1,11 @@
+document
+  .getElementById("downloadButton")
+  .addEventListener("click", function () {
+    window.open(
+      "https://github.com/emi-ran/tpdf-to-pdf/releases/download/tpdfconverter/Converter.exe",
+      "_blank"
+    );
+  });
 document.getElementById("convertButton").addEventListener("click", () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     chrome.scripting.executeScript({
