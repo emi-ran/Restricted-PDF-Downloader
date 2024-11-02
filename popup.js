@@ -23,8 +23,13 @@ function autoScrollAndGeneratePDF() {
     !currentURL.startsWith("https://drive.google.com") ||
     !currentURL.endsWith("/view")
   ) {
-    alert("Lütfen geçerli bir pdf sayfası açınız!"); // Uyarı mesajı
-    return; // Fonksiyonu sonlandır
+    if (
+      !confirm(
+        "Geçerli bir PDF sayfası açmadınız. Devam etmek istiyor musunuz?"
+      )
+    ) {
+      return; // Kullanıcı Hayır butonuna bastıysa fonksiyonu sonlandır
+    }
   }
 
   alert("İndirme işlemi başlatılıyor"); // İndirme işlemi mesajı
@@ -106,9 +111,9 @@ function autoScrollAndGeneratePDF() {
         } else {
           setTimeout(function () {
             generatePDFDataFile();
-          }, 1500);
+          }, 500);
         }
-      }, 400);
+      }, 300);
     }
 
     myLoop(0, 0);
