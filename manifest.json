@@ -1,13 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "PDF Data Converter",
+  "name": "Restricted PDF Downloader",
   "version": "1.0",
-  "description": "Convert images to PDF Data file",
+  "description": "Read-Only belgeleri indirmek için tasarlanmış bir eklenti.",
   "permissions": ["activeTab", "scripting"],
   "action": {
     "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "web_accessible_resources": [{
+    "resources": ["jspdf.umd.min.js"],
+    "matches": ["<all_urls>"]
+  }]
 }

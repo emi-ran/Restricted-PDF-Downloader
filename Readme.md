@@ -1,12 +1,13 @@
 # Restricted PDF Downloader
 
-Bu proje, Google Drive'da bulunan PDF belgelerinden görüntüleri alıp bir .tpdf dosyasına dönüştüren bir Chrome uzantısıdır.
+Bu proje, Google Drive'da bulunan kısıtlı PDF belgelerini direkt olarak indirilebilir PDF formatına dönüştüren bir Chrome uzantısıdır.
 
 ## Özellikler
 
-- Google Drive üzerinde açılan PDF belgelerinden görüntüleri otomatik olarak alma.
-- Görüntüleri Base64 formatında birleştirip .tpdf dosyası olarak indirme.
-- Kullanıcı dostu bir arayüz ile basit ve hızlı kullanım.
+- Google Drive üzerinde açılan PDF belgelerini doğrudan PDF formatına dönüştürme
+- Otomatik kaydırma ile tüm sayfaları yakalama
+- PDF dosyasını otomatik olarak indirme
+- Kullanıcı dostu bir arayüz ile basit ve hızlı kullanım
 
 ## Gereksinimler
 
@@ -24,21 +25,28 @@ Bu proje, Google Drive'da bulunan PDF belgelerinden görüntüleri alıp bir .tp
 
 2. **PDF Belgesini Açma**:
 
-   - Google Drive üzerinde bir PDF belgesi açın. URL’nin `https://drive.google.com` ile başladığından ve `/view` ile bittiğinden emin olun.
+   - Google Drive üzerinde bir PDF belgesi açın. URL'nin `https://drive.google.com` ile başladığından ve `/view` ile bittiğinden emin olun.
 
-3. **Dönüştürme İşlemi**:
+3. **Dönüştürme ve İndirme İşlemi**:
 
    - Uzantı ikonuna tıklayın ve "PDFData'ya Dönüştür ve İndir" butonuna basın.
-   - Uygulama, PDF belgesini otomatik olarak kaydıracak ve görüntüleri toplayacaktır.
+   - Uygulama, PDF belgesini otomatik olarak kaydıracak ve tüm sayfaları işleyecektir.
+   - İşlem tamamlandığında, PDF dosyası otomatik olarak indirilecektir.
 
-4. **İndirme**:
-   - İşlem tamamlandığında, .tpdf dosyası otomatik olarak indirilecektir.
+## Nasıl Çalışır?
+
+Uzantı aşağıdaki adımları gerçekleştirir:
+
+1. PDF sayfalarını görüntü olarak yakalar
+2. Görüntüleri işler ve kalitesini optimize eder
+3. Tüm sayfaları tek bir PDF dosyasında birleştirir
+4. Oluşturulan PDF'i otomatik olarak indirir
 
 ## Önemli Notlar
 
 - Bu uygulama yalnızca eğitim amaçlıdır. Google Drive'daki içeriklerin indirilmesi veya kullanılmasıyla ilgili herhangi bir yasal sorumluluk kabul edilmez.
 - Lütfen sadece kendi dosyalarınızı indirin veya sahibinin izniyle içeriği kullanın.
-- .tpdf dosyasını .pdf dosyasına çevirmek için [BURADAKİ](https://github.com/emi-ran/tpdf-to-pdf/releases/tag/tpdfconverter) projemde oluşturduğum dönüştürücüyü indirebilirsiniz. Ek olarak bu uygulamayı eklenti üzerinde bulunan `Pdf Converter'ı indirmek için tıklayınız` yazısına tıklayarak da indirebilirsiniz.
+- Uzantı yalnızca Google Drive üzerinde görüntülenen PDF dosyalarını işleyebilir. Diğer platformlar veya dosya türleri için uyumlu değildir.
 
 ## İletişim
 

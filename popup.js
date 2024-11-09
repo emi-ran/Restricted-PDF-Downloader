@@ -1,73 +1,100 @@
-document
-  .getElementById("downloadButton")
-  .addEventListener("click", function () {
-    window.open(
-      "https://github.com/emi-ran/tpdf-to-pdf/releases/download/tpdfconverter/Converter.exe",
-      "_blank"
-    );
-  });
 document.getElementById("convertButton").addEventListener("click", () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    chrome.scripting.executeScript({
-      target: { tabId: tabs[0].id },
-      function: autoScrollAndGeneratePDF,
-    });
+    chrome.scripting
+      .executeScript({
+        target: { tabId: tabs[0].id },
+        files: ["jspdf.umd.min.js"],
+      })
+      .then(() => {
+        chrome.scripting.executeScript({
+          target: { tabId: tabs[0].id },
+          function: autoScrollAndGeneratePDF,
+        });
+      })
+      .catch((err) => {
+        console.error("Script injection error:", err);
+      });
   });
 });
 
-// Renamed function to avoid duplicate declaration
 function autoScrollAndGeneratePDF() {
-  const currentURL = window.location.href; // Sayfanın URL'sini al
-  // URL kontrolü
+  const currentURL = window.location.href;
+
   if (
     !currentURL.startsWith("https://drive.google.com") ||
     !currentURL.endsWith("/view")
   ) {
-    if (
-      !confirm(
-        "Geçerli bir PDF sayfası açmadınız. Devam etmek istiyor musunuz?"
-      )
-    ) {
-      return; // Kullanıcı Hayır butonuna bastıysa fonksiyonu sonlandır
-    }
+    alert("Geçerli bir PDF sayfası açmadınız.");
+    return;
   }
 
-  alert("İndirme işlemi başlatılıyor"); // İndirme işlemi mesajı
+  alert("İndirme işlemi başlatılıyor");
 
   const documentName = (document.title || "Document").trim();
-  let processedDocumentName = documentName.split(".pdf")[0]; // .pdf varsa, onu ve sonrasını sil
-  let documentContent = "";
+  let processedDocumentName = documentName.split(".pdf")[0];
 
-  function generatePDFDataFile() {
-    const imgTags = document.getElementsByTagName("img");
-    const checkURLString = "blob:https://drive.google.com/";
-    let validImgTagCounter = 0;
+  async function generatePDF() {
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: "a4",
+      });
 
-    for (let i = 0; i < imgTags.length; i++) {
-      if (
-        imgTags[i].src.substring(0, checkURLString.length) === checkURLString
-      ) {
-        validImgTagCounter++;
-        const img = imgTags[i];
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
-        const imgDataURL = canvas.toDataURL();
+      const imgTags = document.getElementsByTagName("img");
+      const checkURLString = "blob:https://drive.google.com/";
+      let validImgTagCounter = 0;
+      let pageCounter = 0;
 
-        documentContent += documentContent ? "\n" + imgDataURL : imgDataURL;
+      for (let i = 0; i < imgTags.length; i++) {
+        if (
+          imgTags[i].src.substring(0, checkURLString.length) === checkURLString
+        ) {
+          validImgTagCounter++;
+          const img = imgTags[i];
+
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+
+          const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+          const pdfWidth = doc.internal.pageSize.getWidth();
+          const pdfHeight = doc.internal.pageSize.getHeight();
+
+          const imgRatio = img.naturalWidth / img.naturalHeight;
+          let imgWidth = pdfWidth;
+          let imgHeight = imgWidth / imgRatio;
+
+          if (imgHeight > pdfHeight) {
+            imgHeight = pdfHeight;
+            imgWidth = imgHeight * imgRatio;
+          }
+
+          const x = (pdfWidth - imgWidth) / 2;
+          const y = (pdfHeight - imgHeight) / 2;
+
+          if (pageCounter > 0) {
+            doc.addPage();
+          }
+
+          doc.addImage(imgData, "JPEG", x, y, imgWidth, imgHeight);
+          pageCounter++;
+        }
       }
-    }
 
-    const anchorElement = document.createElement("a");
-    const file = new Blob([documentContent], { type: "text/plain" });
-    const url = URL.createObjectURL(file);
-    anchorElement.href = url;
-    anchorElement.download = processedDocumentName + ".tpdf"; // Güncellenmiş isim
-    document.body.appendChild(anchorElement);
-    anchorElement.click();
-    document.body.removeChild(anchorElement);
+      if (validImgTagCounter > 0) {
+        doc.save(processedDocumentName + ".pdf");
+      } else {
+        alert("Dönüştürülecek görsel bulunamadı!");
+      }
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      alert("PDF oluşturulurken bir hata oluştu: " + error.message);
+    }
   }
 
   const allElements = document.querySelectorAll("*");
@@ -110,17 +137,17 @@ function autoScrollAndGeneratePDF() {
           myLoop(remainingHeightToScroll, scrollToLocation);
         } else {
           setTimeout(function () {
-            generatePDFDataFile();
+            generatePDF();
           }, 500);
         }
-      }, 300);
+      }, 200);
     }
 
     myLoop(0, 0);
   } else {
     console.log("No Scroll");
     setTimeout(function () {
-      generatePDFDataFile();
+      generatePDF();
     }, 1500);
   }
 }

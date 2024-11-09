@@ -2,26 +2,32 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>PDF Data Converter</title>
+    <title>Restricted PDF Downloader</title>
     <style>
         body { 
-            width: 300px; 
+            width: 200px;
             padding: 10px; 
             text-align: center; 
         }
         #convertButton, #downloadButton {
+            width: 100%;
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
             border: none;
+            border-radius: 4px;
             cursor: pointer;
-            margin-top: 10px; /* Butonlar arasında boşluk */
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        #convertButton:hover, #downloadButton:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
-    <button id="convertButton">PDFData'ya Dönüştür ve İndir</button>
-    <button id="downloadButton">Pdf Converter'ı indirmek için tıklayınız</button>
+    <button id="convertButton">PDF'e Dönüştür ve İndir</button>
+    <script src="jspdf.umd.min.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>
