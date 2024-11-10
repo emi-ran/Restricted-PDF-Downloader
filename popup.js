@@ -17,7 +17,7 @@ document.getElementById("convertButton").addEventListener("click", () => {
     chrome.scripting
       .executeScript({
         target: { tabId: tabs[0].id },
-        files: ["jspdf.umd.min.js"],
+        files: ["assets/jspdf.umd.min.js"],
       })
       .then(() => {
         chrome.scripting.executeScript({
