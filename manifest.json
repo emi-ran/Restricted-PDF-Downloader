@@ -13,5 +13,10 @@
   "web_accessible_resources": [{
     "resources": ["jspdf.umd.min.js"],
     "matches": ["<all_urls>"]
-  }]
+  }],
+  "icons": {
+    "16": "assets/ico.png",
+    "48": "assets/ico.png",
+    "128": "assets/ico.png"
+  }
 }
