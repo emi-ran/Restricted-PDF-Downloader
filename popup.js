@@ -28,19 +28,277 @@ document.getElementById("convertButton").addEventListener("click", () => {
 
               if (
                 !currentURL.startsWith("https://drive.google.com") ||
-                !currentURL.endsWith("/view")
+                !currentURL.match(/\/view(\?|$)/)
               ) {
-                alert("Geçerli bir PDF sayfası açmadınız.");
+                // Modern hata bildirimi göster
+                const errorNotification = document.createElement("div");
+                errorNotification.style.cssText = `
+                  position: fixed;
+                  top: 50%;
+                  left: 50%;
+                  transform: translate(-50%, -50%);
+                  min-width: 400px;
+                  max-width: 500px;
+                  background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+                  color: white;
+                  padding: 0;
+                  border-radius: 16px;
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                  z-index: 999999;
+                  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);
+                  animation: errorPop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                  overflow: hidden;
+                `;
+
+                const errorStyle = document.createElement("style");
+                errorStyle.textContent = `
+                  @keyframes errorPop {
+                    0% {
+                      transform: translate(-50%, -50%) scale(0.7);
+                      opacity: 0;
+                    }
+                    100% {
+                      transform: translate(-50%, -50%) scale(1);
+                      opacity: 1;
+                    }
+                  }
+                  @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-10px); }
+                    75% { transform: translateX(10px); }
+                  }
+                `;
+                document.head.appendChild(errorStyle);
+
+                const errorContent = document.createElement("div");
+                errorContent.style.cssText = `
+                  padding: 30px;
+                  text-align: center;
+                `;
+
+                const errorIcon = document.createElement("div");
+                errorIcon.style.cssText = `
+                  font-size: 64px;
+                  margin-bottom: 20px;
+                  line-height: 1;
+                  animation: shake 0.5s ease-in-out;
+                `;
+                errorIcon.textContent = "⚠️";
+
+                const errorTitle = document.createElement("div");
+                errorTitle.style.cssText = `
+                  font-size: 20px;
+                  font-weight: 600;
+                  margin-bottom: 16px;
+                  line-height: 1.3;
+                `;
+                errorTitle.textContent = "Geçersiz Sayfa!";
+
+                const errorMessage = document.createElement("div");
+                errorMessage.style.cssText = `
+                  font-size: 14px;
+                  line-height: 1.6;
+                  opacity: 0.95;
+                  margin-bottom: 20px;
+                `;
+                errorMessage.innerHTML = `
+                  Bu uzantı sadece Google Drive PDF görüntüleyicide çalışır.<br>
+                  <br>
+                  <strong>Gerekli URL formatı:</strong><br>
+                  <code style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                    https://drive.google.com/.../view
+                  </code>
+                `;
+
+                const closeButton = document.createElement("button");
+                closeButton.style.cssText = `
+                  background: rgba(255,255,255,0.9);
+                  color: #eb3349;
+                  border: none;
+                  padding: 12px 32px;
+                  border-radius: 8px;
+                  font-size: 14px;
+                  font-weight: 600;
+                  cursor: pointer;
+                  transition: all 0.2s ease;
+                  font-family: inherit;
+                `;
+                closeButton.textContent = "Anladım";
+
+                closeButton.onmouseover = () => {
+                  closeButton.style.background = "white";
+                  closeButton.style.transform = "scale(1.05)";
+                };
+                closeButton.onmouseout = () => {
+                  closeButton.style.background = "rgba(255,255,255,0.9)";
+                  closeButton.style.transform = "scale(1)";
+                };
+                closeButton.onclick = () => {
+                  errorNotification.style.animation = "errorPop 0.2s reverse";
+                  setTimeout(() => errorNotification.remove(), 200);
+                };
+
+                errorContent.appendChild(errorIcon);
+                errorContent.appendChild(errorTitle);
+                errorContent.appendChild(errorMessage);
+                errorContent.appendChild(closeButton);
+                errorNotification.appendChild(errorContent);
+                document.body.appendChild(errorNotification);
+
+                // 8 saniye sonra otomatik kapat
+                setTimeout(() => {
+                  if (document.body.contains(errorNotification)) {
+                    errorNotification.style.animation = "errorPop 0.2s reverse";
+                    setTimeout(() => errorNotification.remove(), 200);
+                  }
+                }, 8000);
+
                 return;
               }
-
-              alert("İndirme işlemi başlatılıyor");
 
               const documentName = (document.title || "Document").trim();
               let processedDocumentName = documentName.split(".pdf")[0];
 
-              async function generatePDF() {
+              // Modern progress göstergesi oluştur
+              const progressContainer = document.createElement("div");
+              progressContainer.id = "pdf-download-progress-container";
+              progressContainer.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                min-width: 320px;
+                max-width: 400px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 0;
+                border-radius: 12px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                z-index: 999999;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2);
+                animation: slideIn 0.3s ease-out;
+                overflow: hidden;
+              `;
+
+              // Animasyon tanımla
+              const style = document.createElement("style");
+              style.textContent = `
+                @keyframes slideIn {
+                  from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                  }
+                  to {
+                    transform: translateX(0);
+                    opacity: 1;
+                  }
+                }
+                @keyframes slideOut {
+                  from {
+                    transform: translateX(0);
+                    opacity: 1;
+                  }
+                  to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                  }
+                }
+                @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+                @keyframes pulse {
+                  0%, 100% { opacity: 1; }
+                  50% { opacity: 0.5; }
+                }
+              `;
+              document.head.appendChild(style);
+
+              const progressContent = document.createElement("div");
+              progressContent.style.cssText = `
+                padding: 20px;
+              `;
+
+              const progressHeader = document.createElement("div");
+              progressHeader.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 12px;
+              `;
+
+              const spinnerIcon = document.createElement("div");
+              spinnerIcon.id = "progress-icon";
+              spinnerIcon.textContent = "⚡";
+              spinnerIcon.style.cssText = `
+                font-size: 24px;
+                animation: pulse 1.5s ease-in-out infinite;
+              `;
+
+              const progressTitle = document.createElement("div");
+              progressTitle.id = "progress-title";
+              progressTitle.style.cssText = `
+                font-size: 16px;
+                font-weight: 600;
+                flex: 1;
+              `;
+              progressTitle.textContent = "PDF İndiriliyor";
+
+              progressHeader.appendChild(spinnerIcon);
+              progressHeader.appendChild(progressTitle);
+
+              const progressMessage = document.createElement("div");
+              progressMessage.id = "progress-message";
+              progressMessage.style.cssText = `
+                font-size: 13px;
+                opacity: 0.9;
+                line-height: 1.4;
+                margin-bottom: 12px;
+              `;
+              progressMessage.textContent = "İndirme işlemi başlatılıyor...";
+
+              const progressBarContainer = document.createElement("div");
+              progressBarContainer.style.cssText = `
+                width: 100%;
+                height: 4px;
+                background: rgba(255,255,255,0.2);
+                border-radius: 2px;
+                overflow: hidden;
+              `;
+
+              const progressBar = document.createElement("div");
+              progressBar.id = "progress-bar";
+              progressBar.style.cssText = `
+                width: 0%;
+                height: 100%;
+                background: linear-gradient(90deg, #fff, #f0f0f0);
+                border-radius: 2px;
+                transition: width 0.3s ease;
+              `;
+
+              progressBarContainer.appendChild(progressBar);
+              progressContent.appendChild(progressHeader);
+              progressContent.appendChild(progressMessage);
+              progressContent.appendChild(progressBarContainer);
+              progressContainer.appendChild(progressContent);
+              document.body.appendChild(progressContainer);
+
+              function updateProgress(message, percent = null, icon = "⚡") {
+                progressMessage.textContent = message;
+                spinnerIcon.textContent = icon;
+
+                if (percent !== null) {
+                  progressBar.style.width = percent + "%";
+                }
+              }
+
+              async function generatePDF(images) {
                 try {
+                  updateProgress(
+                    `PDF oluşturuluyor... (${images.length} sayfa)`,
+                    10,
+                    "📄"
+                  );
+
                   const { jsPDF } = window.jspdf;
                   const doc = new jsPDF({
                     orientation: "portrait",
@@ -48,68 +306,92 @@ document.getElementById("convertButton").addEventListener("click", () => {
                     format: "a4",
                   });
 
-                  const imgTags = document.getElementsByTagName("img");
-                  const checkURLString = "blob:https://drive.google.com/";
-                  let validImgTagCounter = 0;
-                  let pageCounter = 0;
+                  const pdfWidth = doc.internal.pageSize.getWidth();
+                  const pdfHeight = doc.internal.pageSize.getHeight();
 
-                  for (let i = 0; i < imgTags.length; i++) {
-                    if (
-                      imgTags[i].src.substring(0, checkURLString.length) ===
-                      checkURLString
-                    ) {
-                      validImgTagCounter++;
-                      const img = imgTags[i];
+                  for (let i = 0; i < images.length; i++) {
+                    const progress = 10 + Math.round((i / images.length) * 70);
+                    updateProgress(
+                      `Sayfa ${i + 1}/${images.length} işleniyor...`,
+                      progress,
+                      "⚙️"
+                    );
 
-                      const canvas = document.createElement("canvas");
-                      const context = canvas.getContext("2d");
-                      canvas.width = img.naturalWidth;
-                      canvas.height = img.naturalHeight;
-                      context.drawImage(
-                        img,
-                        0,
-                        0,
-                        img.naturalWidth,
-                        img.naturalHeight
-                      );
+                    const img = images[i];
+                    const canvas = document.createElement("canvas");
+                    const context = canvas.getContext("2d");
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    context.drawImage(
+                      img,
+                      0,
+                      0,
+                      img.naturalWidth,
+                      img.naturalHeight
+                    );
 
-                      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+                    const imgData = canvas.toDataURL("image/jpeg", 0.95);
 
-                      const pdfWidth = doc.internal.pageSize.getWidth();
-                      const pdfHeight = doc.internal.pageSize.getHeight();
+                    const imgRatio = img.naturalWidth / img.naturalHeight;
+                    let imgWidth = pdfWidth;
+                    let imgHeight = imgWidth / imgRatio;
 
-                      const imgRatio = img.naturalWidth / img.naturalHeight;
-                      let imgWidth = pdfWidth;
-                      let imgHeight = imgWidth / imgRatio;
+                    if (imgHeight > pdfHeight) {
+                      imgHeight = pdfHeight;
+                      imgWidth = imgHeight * imgRatio;
+                    }
 
-                      if (imgHeight > pdfHeight) {
-                        imgHeight = pdfHeight;
-                        imgWidth = imgHeight * imgRatio;
-                      }
+                    const x = (pdfWidth - imgWidth) / 2;
+                    const y = (pdfHeight - imgHeight) / 2;
 
-                      const x = (pdfWidth - imgWidth) / 2;
-                      const y = (pdfHeight - imgHeight) / 2;
+                    if (i > 0) {
+                      doc.addPage();
+                    }
 
-                      if (pageCounter > 0) {
-                        doc.addPage();
-                      }
+                    doc.addImage(imgData, "JPEG", x, y, imgWidth, imgHeight);
 
-                      doc.addImage(imgData, "JPEG", x, y, imgWidth, imgHeight);
-                      pageCounter++;
+                    // Her 5 sayfada bir kısa pause (UI donmaması için)
+                    if (i % 5 === 0 && i > 0) {
+                      await new Promise((resolve) => setTimeout(resolve, 10));
                     }
                   }
 
-                  if (validImgTagCounter > 0) {
-                    doc.save(processedDocumentName + ".pdf");
-                  } else {
-                    alert("Dönüştürülecek görsel bulunamadı!");
-                  }
+                  updateProgress("PDF kaydediliyor...", 90, "💾");
+                  doc.save(processedDocumentName + ".pdf");
+
+                  updateProgress("İndirme tamamlandı!", 100, "✅");
+                  progressContainer.style.background =
+                    "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)";
+                  setTimeout(() => {
+                    progressContainer.style.animation =
+                      "slideOut 0.3s ease-out";
+                    setTimeout(() => progressContainer.remove(), 300);
+                  }, 2000);
                 } catch (error) {
                   console.error("PDF generation error:", error);
-                  alert("PDF oluşturulurken bir hata oluştu: " + error.message);
+                  updateProgress("Hata oluştu!", 0, "❌");
+                  progressContainer.style.background =
+                    "linear-gradient(135deg, #eb3349 0%, #f45c43 100%)";
+
+                  // Detaylı hata mesajı ekle
+                  const errorDetail = document.createElement("div");
+                  errorDetail.style.cssText = `
+                    margin-top: 8px;
+                    padding: 8px 12px;
+                    background: rgba(0,0,0,0.2);
+                    border-radius: 6px;
+                    font-size: 11px;
+                    font-family: monospace;
+                    word-break: break-word;
+                  `;
+                  errorDetail.textContent = error.message;
+                  progressContent.appendChild(errorDetail);
+
+                  setTimeout(() => progressContainer.remove(), 5000);
                 }
               }
 
+              // Scroll container'ı bul
               const allElements = document.querySelectorAll("*");
               let chosenElement = null;
               let heightOfScrollableElement = 0;
@@ -125,50 +407,163 @@ document.getElementById("convertButton").addEventListener("click", () => {
                 }
               }
 
-              if (
-                chosenElement &&
-                chosenElement.scrollHeight > chosenElement.clientHeight
-              ) {
-                console.log("Auto Scroll");
-                const scrollDistance = Math.round(
-                  chosenElement.clientHeight / 2
-                );
-                let loopCounter = 0;
+              const checkURLString = "blob:https://drive.google.com/";
+              let loadedImages = [];
+              let lastImageCount = 0;
+              let stableCount = 0;
 
-                function myLoop(remainingHeightToScroll, scrollToLocation) {
-                  loopCounter++;
-                  console.log(loopCounter);
+              function checkImages() {
+                const imgTags = document.getElementsByTagName("img");
+                loadedImages = [];
 
-                  setTimeout(function () {
-                    if (remainingHeightToScroll === 0) {
-                      scrollToLocation = scrollDistance;
-                      chosenElement.scrollTo(0, scrollToLocation);
-                      remainingHeightToScroll =
-                        chosenElement.scrollHeight - scrollDistance;
-                    } else {
-                      scrollToLocation = scrollToLocation + scrollDistance;
-                      chosenElement.scrollTo(0, scrollToLocation);
-                      remainingHeightToScroll =
-                        remainingHeightToScroll - scrollDistance;
-                    }
-
-                    if (remainingHeightToScroll >= chosenElement.clientHeight) {
-                      myLoop(remainingHeightToScroll, scrollToLocation);
-                    } else {
-                      setTimeout(function () {
-                        generatePDF();
-                      }, 500);
-                    }
-                  }, speed);
+                for (let i = 0; i < imgTags.length; i++) {
+                  if (
+                    imgTags[i].src.substring(0, checkURLString.length) ===
+                      checkURLString &&
+                    imgTags[i].complete &&
+                    imgTags[i].naturalHeight > 0
+                  ) {
+                    loadedImages.push(imgTags[i]);
+                  }
                 }
 
-                myLoop(0, 0);
-              } else {
-                console.log("No Scroll");
-                setTimeout(function () {
-                  generatePDF();
-                }, 1500);
+                return loadedImages.length;
               }
+
+              async function smartScroll() {
+                if (!chosenElement) {
+                  // Scroll yoksa direkt işle
+                  updateProgress("Görüntüler yükleniyor...", 5, "🔍");
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+
+                  const count = checkImages();
+                  if (count > 0) {
+                    await generatePDF(loadedImages);
+                  } else {
+                    updateProgress(
+                      "Dönüştürülecek görsel bulunamadı!",
+                      0,
+                      "❌"
+                    );
+                    progressContainer.style.background =
+                      "linear-gradient(135deg, #eb3349 0%, #f45c43 100%)";
+
+                    // Bilgilendirme mesajı ekle
+                    const infoMessage = document.createElement("div");
+                    infoMessage.style.cssText = `
+                      margin-top: 8px;
+                      padding: 8px 12px;
+                      background: rgba(0,0,0,0.2);
+                      border-radius: 6px;
+                      font-size: 12px;
+                    `;
+                    infoMessage.textContent =
+                      "Lütfen sayfayı yeniden yükleyip tekrar deneyin.";
+                    progressContent.appendChild(infoMessage);
+
+                    setTimeout(() => progressContainer.remove(), 4000);
+                  }
+                  return;
+                }
+
+                updateProgress("Sayfalar yükleniyor...", 0, "📥");
+
+                // Hızlı scroll stratejisi: Büyük adımlarla scroll et
+                const totalHeight = chosenElement.scrollHeight;
+                const viewHeight = chosenElement.clientHeight;
+                const scrollStep = viewHeight * 1.5; // Daha büyük adımlar
+                let currentScroll = 0;
+
+                async function scrollNext() {
+                  currentScroll += scrollStep;
+
+                  if (currentScroll < totalHeight) {
+                    chosenElement.scrollTo(0, currentScroll);
+                    const currentCount = checkImages();
+                    const scrollProgress = Math.min(
+                      Math.round((currentScroll / totalHeight) * 100),
+                      100
+                    );
+                    updateProgress(
+                      `Yükleniyor... (${currentCount} sayfa bulundu)`,
+                      Math.min(scrollProgress * 0.08, 8),
+                      "📥"
+                    );
+
+                    // Daha kısa bekleme süresi
+                    await new Promise((resolve) =>
+                      setTimeout(resolve, speed / 2)
+                    );
+                    await scrollNext();
+                  } else {
+                    // Sona geldi, en alta scroll et
+                    chosenElement.scrollTo(0, totalHeight);
+                    await new Promise((resolve) => setTimeout(resolve, 500));
+
+                    // Tüm görüntülerin yüklendiğinden emin ol
+                    await waitForAllImages();
+                  }
+                }
+
+                await scrollNext();
+              }
+
+              async function waitForAllImages() {
+                updateProgress("Tüm görüntüler kontrol ediliyor...", 8, "🔍");
+
+                // Görüntü sayısı stabilize olana kadar bekle
+                for (let i = 0; i < 15; i++) {
+                  const currentCount = checkImages();
+
+                  if (currentCount === lastImageCount) {
+                    stableCount++;
+                  } else {
+                    stableCount = 0;
+                    lastImageCount = currentCount;
+                  }
+
+                  const checkProgress = 8 + Math.round((i / 15) * 2);
+                  updateProgress(
+                    `${currentCount} sayfa bulundu...`,
+                    checkProgress,
+                    "🔍"
+                  );
+
+                  // 3 kez üst üste aynı sayıda kaldıysa yükleme tamamlandı
+                  if (stableCount >= 3 && currentCount > 0) {
+                    await generatePDF(loadedImages);
+                    return;
+                  }
+
+                  await new Promise((resolve) => setTimeout(resolve, 300));
+                }
+
+                // Timeout: Yine de bulunanları işle
+                if (loadedImages.length > 0) {
+                  await generatePDF(loadedImages);
+                } else {
+                  updateProgress("Dönüştürülecek görsel bulunamadı!", 0, "❌");
+                  progressContainer.style.background =
+                    "linear-gradient(135deg, #eb3349 0%, #f45c43 100%)";
+
+                  // Bilgilendirme mesajı ekle
+                  const infoMessage = document.createElement("div");
+                  infoMessage.style.cssText = `
+                    margin-top: 8px;
+                    padding: 8px 12px;
+                    background: rgba(0,0,0,0.2);
+                    border-radius: 6px;
+                    font-size: 12px;
+                  `;
+                  infoMessage.textContent =
+                    "Sayfayı yeniden yükleyip biraz bekledikten sonra tekrar deneyin.";
+                  progressContent.appendChild(infoMessage);
+
+                  setTimeout(() => progressContainer.remove(), 4000);
+                }
+              }
+
+              smartScroll();
             }
             autoScrollAndGeneratePDF();
           },
