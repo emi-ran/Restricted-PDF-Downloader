@@ -1,70 +1,113 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Restricted PDF Downloader</title>
     <style>
-        body { 
-            width: 300px;
-            padding: 10px; 
-            text-align: center; 
-        }
-        #convertButton, #downloadButton {
-            width: 100%;
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background-color 0.3s;
-        }
-        #convertButton:hover, #downloadButton:hover {
-            background-color: #45a049;
-        }
-        .speed-container {
-            margin: 15px 0;
-        }
-        .speed-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        .speed-options {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-        .speed-box {
-            flex: 1;
-            padding: 8px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .speed-box:hover {
-            background-color: #f0f0f0;
-        }
-        .speed-box.selected {
-            background-color: #4CAF50;
-            color: white;
-            border-color: #4CAF50;
-        }
+      body {
+        width: 300px;
+        padding: 10px;
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+      }
+      .btn {
+        width: 100%;
+        padding: 12px 20px;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .btn:active {
+        transform: translateY(0);
+      }
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .btn-green {
+        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+      }
+      .btn-green:hover {
+        background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+      }
+      .btn-blue {
+        background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+      }
+      .btn-blue:hover {
+        background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+      }
+      .speed-container {
+        margin: 15px 0;
+      }
+      .speed-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+      }
+      .speed-options {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+      .speed-box {
+        flex: 1;
+        padding: 10px 8px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 13px;
+        font-weight: 500;
+        background: #fafafa;
+      }
+      .speed-box:hover {
+        background-color: #f0f0f0;
+        border-color: #ccc;
+      }
+      .speed-box.selected {
+        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        color: white;
+        border-color: #4caf50;
+      }
+      #batchStatus {
+        margin-top: 10px;
+        padding: 8px 12px;
+        font-size: 12px;
+        color: #666;
+        background: #f5f5f5;
+        border-radius: 4px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="speed-container">
-        <span class="speed-label">Kaydırma Hızı:</span>
-        <div class="speed-options">
-            <div class="speed-box" data-speed="800">Yavaş</div>
-            <div class="speed-box selected" data-speed="400">Orta</div>
-            <div class="speed-box" data-speed="200">Hızlı</div>
-        </div>
+      <span class="speed-label">Kaydırma Hızı</span>
+      <div class="speed-options">
+        <div class="speed-box" data-speed="800">Yavaş</div>
+        <div class="speed-box selected" data-speed="400">Orta</div>
+        <div class="speed-box" data-speed="200">Hızlı</div>
+      </div>
     </div>
-    <button id="convertButton">PDF'e Dönüştür ve İndir</button>
+    <button id="convertButton" class="btn btn-green">
+      PDF'e Dönüştür ve İndir
+    </button>
+    <button id="batchButton" class="btn btn-blue" style="display: none">
+      Toplu İndir (<span id="tabCount">0</span> sekme)
+    </button>
+    <div id="batchStatus" style="display: none"></div>
     <script src="assets/jspdf.umd.min.js"></script>
     <script src="popup.js"></script>
-</body>
+  </body>
 </html>

@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Restricted PDF Downloader",
-  "version": "1.0",
+  "version": "1.2",
   "description": "Read-Only belgeleri indirmek için tasarlanmış bir eklenti.",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "tabs"],
   "action": {
     "default_popup": "popup.html"
   },
