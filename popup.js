@@ -1,4 +1,4 @@
-let selectedSpeed = 400;
+const SPEED = 200; // Hızlı mod
 let driveTabs = [];
 
 // Sayfa yüklendiğinde Drive sekmelerini bul
@@ -16,22 +16,10 @@ let driveTabs = [];
   }
 })();
 
-// Hız seçimi
-document.querySelectorAll(".speed-box").forEach((box) => {
-  box.addEventListener("click", () => {
-    document
-      .querySelectorAll(".speed-box")
-      .forEach((b) => b.classList.remove("selected"));
-    box.classList.add("selected");
-    selectedSpeed = parseInt(box.dataset.speed);
-  });
-});
-
 // Tekli indirme fonksiyonu (content script olarak çalışır)
 function runPdfDownload(speed) {
   const documentName = (document.title || "Document").trim().split(".pdf")[0];
 
-  // Progress göstergesi
   const progressDiv = document.createElement("div");
   progressDiv.id = "pdf-download-progress";
   progressDiv.style.cssText = `
@@ -50,7 +38,6 @@ function runPdfDownload(speed) {
   };
 
   (async () => {
-    // Scroll container bul
     let chosenElement = null;
     let maxHeight = 0;
     document.querySelectorAll("*").forEach((el) => {
@@ -71,7 +58,6 @@ function runPdfDownload(speed) {
       );
     }
 
-    // Scroll ve yükle
     if (chosenElement) {
       const totalHeight = chosenElement.scrollHeight;
       const scrollStep = chosenElement.clientHeight * 1.2;
@@ -86,7 +72,6 @@ function runPdfDownload(speed) {
       chosenElement.scrollTo(0, totalHeight);
     }
 
-    // Toplam sayfa sayısını al ve bekle
     const totalPageEl = document.querySelector('span[jsname="Dt5gRb"]');
     const totalPages = totalPageEl ? parseInt(totalPageEl.textContent) : null;
 
@@ -126,7 +111,6 @@ function runPdfDownload(speed) {
       return;
     }
 
-    // PDF oluştur
     updateStatus(`PDF oluşturuluyor (${loadedImages.length} sayfa)...`);
 
     try {
@@ -183,38 +167,92 @@ function runPdfDownload(speed) {
   })();
 }
 
+// Hata toast'ı göster (content script olarak)
+function showErrorToast(message) {
+  const toast = document.createElement("div");
+  toast.style.cssText = `
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8);
+    min-width: 320px; max-width: 420px;
+    background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+    color: white; padding: 24px; border-radius: 12px; text-align: center;
+    font-family: -apple-system, sans-serif; z-index: 999999;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    animation: toastPop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  `;
+
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes toastPop { to { transform: translate(-50%, -50%) scale(1); } }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  `;
+  document.head.appendChild(style);
+
+  toast.innerHTML = `
+    <div style="font-size:48px;margin-bottom:12px;animation:shake 0.4s ease-in-out;">⚠️</div>
+    <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Geçersiz Sayfa!</div>
+    <div style="font-size:13px;opacity:0.9;line-height:1.5;">${message}</div>
+  `;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.transition = "all 0.2s ease";
+    toast.style.opacity = "0";
+    toast.style.transform = "translate(-50%, -50%) scale(0.8)";
+    setTimeout(() => toast.remove(), 200);
+  }, 4000);
+}
+
 // Tekli indirme butonu
 document.getElementById("convertButton").addEventListener("click", async () => {
-  // Aktif Drive sekmesini bul
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  let targetTab = tabs[0];
+  const currentTab = tabs[0];
 
-  // Eğer aktif sekme Drive değilse, ilk Drive sekmesini kullan
-  if (!targetTab?.url?.startsWith("https://drive.google.com")) {
-    if (driveTabs.length > 0) {
-      targetTab = driveTabs[0];
-      await chrome.tabs.update(targetTab.id, { active: true });
-    } else {
-      alert("Açık Google Drive PDF sekmesi bulunamadı!");
+  // Aktif sekme Drive PDF değilse hata göster
+  const isValidDriveUrl =
+    currentTab?.url?.startsWith("https://drive.google.com") &&
+    currentTab?.url?.match(/\/view(\?|$)/);
+
+  if (!isValidDriveUrl) {
+    // Aktif sekmeye script enjekte edebiliyor muyuz kontrol et
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        function: showErrorToast,
+        args: [
+          "Bu sayfa Google Drive PDF görüntüleyici değil.<br><br>Lütfen bir Google Drive PDF sayfasına gidin ve tekrar deneyin.",
+        ],
+      });
+    } catch (e) {
+      // Chrome:// gibi sayfalarda script çalışmaz, popup'ta göster
+      document.body.innerHTML = `
+        <div style="padding:20px;text-align:center;">
+          <div style="font-size:40px;margin-bottom:10px;">⚠️</div>
+          <div style="font-weight:600;margin-bottom:8px;color:#c00;">Geçersiz Sayfa!</div>
+          <div style="font-size:12px;color:#666;">Bu sayfada çalışamaz. Google Drive PDF sayfasına gidin.</div>
+        </div>
+      `;
       return;
     }
+    window.close();
+    return;
   }
 
+  // Geçerli Drive PDF - indir
   await chrome.scripting.executeScript({
-    target: { tabId: targetTab.id },
+    target: { tabId: currentTab.id },
     files: ["assets/jspdf.umd.min.js"],
   });
 
   await chrome.scripting.executeScript({
-    target: { tabId: targetTab.id },
+    target: { tabId: currentTab.id },
     function: runPdfDownload,
-    args: [selectedSpeed],
+    args: [SPEED],
   });
 
-  window.close(); // Popup'ı kapat
+  window.close();
 });
 
-// Toplu indirme butonu - pencere aç
+// Toplu indirme butonu
 document.getElementById("batchButton").addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "openBatchWindow" });
   window.close();

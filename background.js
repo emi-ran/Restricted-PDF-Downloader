@@ -24,8 +24,8 @@ function openBatchWindow() {
     {
       url: chrome.runtime.getURL("batch.html"),
       type: "popup",
-      width: 360,
-      height: 360,
+      width: 340,
+      height: 280,
     },
     (win) => {
       batchWindowId = win.id;

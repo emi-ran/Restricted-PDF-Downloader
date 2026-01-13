@@ -1,4 +1,4 @@
-let selectedSpeed = 400;
+const SPEED = 200; // Hızlı mod
 let driveTabs = [];
 
 // Sayfa yüklendiğinde Drive sekmelerini bul
@@ -18,17 +18,6 @@ let driveTabs = [];
   }
 })();
 
-// Hız seçimi
-document.querySelectorAll(".speed-box").forEach((box) => {
-  box.addEventListener("click", () => {
-    document
-      .querySelectorAll(".speed-box")
-      .forEach((b) => b.classList.remove("selected"));
-    box.classList.add("selected");
-    selectedSpeed = parseInt(box.dataset.speed);
-  });
-});
-
 function updateStatus(text, progress = null) {
   document.getElementById("statusText").textContent = text;
   if (progress !== null) {
@@ -41,7 +30,6 @@ function generatePdfBase64(speed) {
   return new Promise(async (resolve) => {
     const documentName = (document.title || "Document").trim().split(".pdf")[0];
 
-    // Progress göstergesi
     const progressDiv = document.createElement("div");
     progressDiv.id = "pdf-batch-progress";
     progressDiv.style.cssText = `
@@ -59,7 +47,6 @@ function generatePdfBase64(speed) {
       if (statusEl) statusEl.textContent = text;
     };
 
-    // Scroll container bul
     let chosenElement = null;
     let maxHeight = 0;
     document.querySelectorAll("*").forEach((el) => {
@@ -80,7 +67,6 @@ function generatePdfBase64(speed) {
       );
     }
 
-    // Scroll ve yükle
     if (chosenElement) {
       const totalHeight = chosenElement.scrollHeight;
       const scrollStep = chosenElement.clientHeight * 1.2;
@@ -95,7 +81,6 @@ function generatePdfBase64(speed) {
       chosenElement.scrollTo(0, totalHeight);
     }
 
-    // Toplam sayfa sayısını al ve bekle
     const totalPageEl = document.querySelector('span[jsname="Dt5gRb"]');
     const totalPages = totalPageEl ? parseInt(totalPageEl.textContent) : null;
 
@@ -133,7 +118,6 @@ function generatePdfBase64(speed) {
       return;
     }
 
-    // PDF oluştur
     updateStatus(`PDF oluşturuluyor...`);
 
     try {
@@ -222,7 +206,7 @@ async function startBatchDownload() {
       const result = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         function: generatePdfBase64,
-        args: [selectedSpeed],
+        args: [SPEED],
       });
 
       if (result[0]?.result) {
