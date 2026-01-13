@@ -1,113 +1,185 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
-    <title>Toplu PDF İndirme</title>
+    <title>Restricted PDF Downloader - Toplu İndirme</title>
     <style>
+      :root {
+        --primary: #3b82f6;
+        --primary-dark: #2563eb;
+        --success: #10b981;
+        --success-dark: #059669;
+        --bg: #ffffff;
+        --bg-subtle: #f8fafc;
+        --text: #1e293b;
+        --text-light: #64748b;
+        --border: #e2e8f0;
+        --warning-bg: #ffffb1;
+        --warning-text: #854d0e;
+      }
+
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
       }
+
       html,
       body {
         height: 100%;
         overflow: hidden;
       }
+
       body {
-        padding: 12px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
-        background: #fff;
+        padding: 24px;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
         display: flex;
         flex-direction: column;
       }
+
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+        flex-shrink: 0;
+      }
+
       h3 {
-        text-align: center;
-        margin-bottom: 10px;
-        color: #333;
-        font-size: 15px;
-        flex-shrink: 0;
+        font-size: 18px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: var(--text);
       }
-      .warning {
-        background: #fff3cd;
-        color: #856404;
-        padding: 10px;
-        border-radius: 6px;
-        margin-bottom: 10px;
-        font-size: 11px;
-        line-height: 1.4;
-        text-align: center;
-        flex-shrink: 0;
-      }
-      .status-box {
-        background: #f0f4ff;
-        padding: 10px;
-        border-radius: 6px;
-        margin-bottom: 10px;
+
+      .card {
+        background: var(--bg-subtle);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
+
+      .warning {
+        background: rgb(255 251 235);
+        color: rgb(146 64 14);
+        border: 1px solid rgb(254 243 199);
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 13px;
+        line-height: 1.5;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
       #statusText {
-        font-size: 12px;
-        color: #555;
-        margin-bottom: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 12px;
+        text-align: center;
         word-break: break-word;
       }
-      .progress-bar {
+
+      .progress-container {
         width: 100%;
-        height: 6px;
-        background: #e0e0e0;
-        border-radius: 3px;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
         overflow: hidden;
       }
+
       .progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, #4caf50, #81c784);
-        border-radius: 3px;
-        transition: width 0.3s ease;
+        background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+        border-radius: 4px;
         width: 0%;
+        transition: width 0.3s ease;
       }
+
       .btn {
         width: 100%;
-        padding: 11px;
+        padding: 16px;
         color: white;
         border: none;
-        border-radius: 6px;
+        border-radius: 12px;
         cursor: pointer;
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 600;
-        transition: all 0.2s ease;
-        background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
       }
+
       .btn:hover:not(:disabled) {
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
       }
+
       .btn:disabled {
         opacity: 0.6;
         cursor: not-allowed;
       }
+
       .btn-success {
-        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        background: linear-gradient(
+          135deg,
+          var(--success),
+          var(--success-dark)
+        );
       }
     </style>
   </head>
   <body>
-    <h3>📦 Toplu PDF İndirme</h3>
-
-    <div class="warning">
-      ⚠️ İşlem sırasında bu pencereyi kapatmayın ve sekmelere tıklamayın!
+    <div class="header">
+      <h3>📦 Toplu İndirme</h3>
     </div>
 
-    <div class="status-box">
-      <div id="statusText">Hazır. Başlatmak için butona tıklayın.</div>
-      <div class="progress-bar">
+    <div class="warning">
+      <span>⚠️</span>
+      <span>İşlem bitene kadar pencereyi sakın kapatmayın!</span>
+    </div>
+
+    <div class="card">
+      <div id="statusText">İşlemi başlatmak için butona tıklayın</div>
+      <div class="progress-container">
         <div class="progress-fill" id="progressFill"></div>
       </div>
     </div>
 
     <button id="startBtn" class="btn">
-      🚀 Başlat (<span id="tabCount">0</span> PDF)
+      <span>🚀 İşlemi Başlat</span>
+      <span
+        style="
+          background: rgba(255, 255, 255, 0.2);
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+        "
+        id="tabCount"
+        >0</span
+      >
     </button>
 
     <script src="assets/jszip.min.js"></script>

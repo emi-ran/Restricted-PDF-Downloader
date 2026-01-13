@@ -16,6 +16,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else {
       openBatchWindow();
     }
+  } else if (message.action === "focusBatchWindow") {
+    if (batchWindowId !== null) {
+      chrome.windows.update(batchWindowId, { focused: true });
+    }
   }
 });
 
@@ -24,8 +28,8 @@ function openBatchWindow() {
     {
       url: chrome.runtime.getURL("batch.html"),
       type: "popup",
-      width: 340,
-      height: 280,
+      width: 350,
+      height: 380,
     },
     (win) => {
       batchWindowId = win.id;

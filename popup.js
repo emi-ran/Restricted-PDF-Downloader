@@ -11,7 +11,7 @@ let driveTabs = [];
   );
 
   if (driveTabs.length > 1) {
-    document.getElementById("batchButton").style.display = "block";
+    document.getElementById("batchButton").style.display = "flex";
     document.getElementById("tabCount").textContent = driveTabs.length;
   }
 })();
@@ -21,20 +21,48 @@ function runPdfDownload(speed) {
   const documentName = (document.title || "Document").trim().split(".pdf")[0];
 
   const progressDiv = document.createElement("div");
-  progressDiv.id = "pdf-download-progress";
+  progressDiv.id = "pdf-downloader-toast";
+
   progressDiv.style.cssText = `
-    position: fixed; top: 20px; right: 20px; min-width: 280px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white; padding: 16px; border-radius: 10px;
-    font-family: -apple-system, sans-serif; z-index: 999999;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    position: fixed; top: 20px; right: 20px; min-width: 300px;
+    background: white;
+    color: #1e293b; 
+    padding: 16px; border-radius: 12px;
+    font-family: -apple-system, system-ui, sans-serif; 
+    z-index: 2147483647;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    display: flex; flex-direction: column; gap: 8px;
+    opacity: 0; transform: translateY(-20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   `;
-  progressDiv.innerHTML = `<div style="font-weight:600;margin-bottom:8px;">📄 ${documentName}</div><div id="pdf-dl-status">Yükleniyor...</div>`;
+
+  progressDiv.innerHTML = `
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:20px;">📄</span>
+      <div style="display:flex; flex-direction:column; overflow:hidden;">
+        <div style="font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px;">${documentName}</div>
+        <div id="pdf-dl-status" style="font-size:12px; color:#64748b;">Başlatılıyor...</div>
+      </div>
+    </div>
+    <div style="width:100%; height:4px; background:#f1f5f9; border-radius:2px; overflow:hidden; margin-top:4px;">
+      <div id="pdf-dl-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #3b82f6, #2563eb); border-radius:2px; transition:width 0.3s ease;"></div>
+    </div>
+  `;
+
   document.body.appendChild(progressDiv);
 
+  setTimeout(() => {
+    progressDiv.style.opacity = "1";
+    progressDiv.style.transform = "translateY(0)";
+  }, 10);
+
   const statusEl = document.getElementById("pdf-dl-status");
-  const updateStatus = (text) => {
+  const barEl = document.getElementById("pdf-dl-bar");
+
+  const updateStatus = (text, progress = null) => {
     if (statusEl) statusEl.textContent = text;
+    if (progress !== null && barEl) barEl.style.width = `${progress}%`;
   };
 
   (async () => {
@@ -66,7 +94,10 @@ function runPdfDownload(speed) {
       while (currentScroll < totalHeight) {
         currentScroll += scrollStep;
         chosenElement.scrollTo(0, currentScroll);
-        updateStatus(`Kaydırılıyor... (${getLoadedImages().length} sayfa)`);
+
+        const count = getLoadedImages().length;
+        updateStatus(`Sayfalar taranıyor... (${count} bulundu)`);
+
         await new Promise((r) => setTimeout(r, speed / 2));
       }
       chosenElement.scrollTo(0, totalHeight);
@@ -85,11 +116,14 @@ function runPdfDownload(speed) {
       waited += speed;
 
       const currentCount = getLoadedImages().length;
-      updateStatus(
-        totalPages
-          ? `${currentCount}/${totalPages} sayfa yüklendi`
-          : `${currentCount} sayfa yüklendi`
-      );
+
+      let progress = 0;
+      if (totalPages) {
+        progress = Math.round((currentCount / totalPages) * 100);
+        updateStatus(`${currentCount}/${totalPages} sayfa yüklendi`, progress);
+      } else {
+        updateStatus(`${currentCount} sayfa yüklendi`);
+      }
 
       if (totalPages && currentCount >= totalPages) break;
       if (!totalPages) {
@@ -104,14 +138,18 @@ function runPdfDownload(speed) {
 
     const loadedImages = getLoadedImages();
     if (loadedImages.length === 0) {
-      progressDiv.style.background =
-        "linear-gradient(135deg, #eb3349 0%, #f45c43 100%)";
-      updateStatus("Görsel bulunamadı!");
-      setTimeout(() => progressDiv.remove(), 3000);
+      statusEl.style.color = "#ef4444";
+      barEl.style.background = "#ef4444";
+      updateStatus("Hata: Görsel bulunamadı!");
+      setTimeout(() => {
+        progressDiv.style.opacity = "0";
+        progressDiv.style.transform = "translateY(-20px)";
+        setTimeout(() => progressDiv.remove(), 300);
+      }, 3000);
       return;
     }
 
-    updateStatus(`PDF oluşturuluyor (${loadedImages.length} sayfa)...`);
+    updateStatus(`PDF oluşturuluyor...`, 100);
 
     try {
       const { jsPDF } = window.jspdf;
@@ -154,52 +192,79 @@ function runPdfDownload(speed) {
 
       doc.save(documentName + ".pdf");
 
-      progressDiv.style.background =
-        "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)";
-      updateStatus("✓ İndirildi!");
-      setTimeout(() => progressDiv.remove(), 2000);
+      barEl.style.background = "#10b981";
+      statusEl.style.color = "#10b981";
+      updateStatus("İndirme Tamamlandı!", 100);
+
+      setTimeout(() => {
+        progressDiv.style.opacity = "0";
+        progressDiv.style.transform = "translateY(-20px)";
+        setTimeout(() => progressDiv.remove(), 300);
+      }, 2000);
     } catch (error) {
-      progressDiv.style.background =
-        "linear-gradient(135deg, #eb3349 0%, #f45c43 100%)";
+      barEl.style.background = "#ef4444";
+      statusEl.style.color = "#ef4444";
       updateStatus("Hata: " + error.message);
-      setTimeout(() => progressDiv.remove(), 4000);
+      setTimeout(() => {
+        progressDiv.style.opacity = "0";
+        progressDiv.style.transform = "translateY(-20px)";
+        setTimeout(() => progressDiv.remove(), 300);
+      }, 4000);
     }
   })();
 }
 
 // Hata toast'ı göster (content script olarak)
 function showErrorToast(message) {
+  // Backdrop (Arkaplan karartma ve blur)
+  const backdrop = document.createElement("div");
+  backdrop.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    z-index: 2147483646;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  `;
+  document.body.appendChild(backdrop);
+
   const toast = document.createElement("div");
   toast.style.cssText = `
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8);
-    min-width: 320px; max-width: 420px;
-    background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
-    color: white; padding: 24px; border-radius: 12px; text-align: center;
-    font-family: -apple-system, sans-serif; z-index: 999999;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-    animation: toastPop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+    min-width: 320px; max-width: 400px;
+    background: rgba(255, 255, 255, 0.98);
+    color: #1e293b; padding: 32px; border-radius: 20px; text-align: center;
+    font-family: -apple-system, system-ui, sans-serif; 
+    z-index: 2147483647;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   `;
-
-  const style = document.createElement("style");
-  style.textContent = `
-    @keyframes toastPop { to { transform: translate(-50%, -50%) scale(1); } }
-    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-  `;
-  document.head.appendChild(style);
 
   toast.innerHTML = `
-    <div style="font-size:48px;margin-bottom:12px;animation:shake 0.4s ease-in-out;">⚠️</div>
-    <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Geçersiz Sayfa!</div>
-    <div style="font-size:13px;opacity:0.9;line-height:1.5;">${message}</div>
+    <div style="font-size:48px; margin-bottom:20px;">⚠️</div>
+    <div style="font-size:20px; font-weight:700; margin-bottom:12px; color:#1e293b;">Geçersiz Sayfa</div>
+    <div style="font-size:15px; color:#64748b; line-height:1.6;">${message}</div>
   `;
   document.body.appendChild(toast);
 
+  // Giriş animasyonu
   setTimeout(() => {
-    toast.style.transition = "all 0.2s ease";
+    backdrop.style.opacity = "1";
+    toast.style.opacity = "1";
+    toast.style.transform = "translate(-50%, -50%) scale(1)";
+  }, 10);
+
+  // Çıkış animasyonu
+  setTimeout(() => {
+    backdrop.style.opacity = "0";
     toast.style.opacity = "0";
-    toast.style.transform = "translate(-50%, -50%) scale(0.8)";
-    setTimeout(() => toast.remove(), 200);
-  }, 4000);
+    toast.style.transform = "translate(-50%, -50%) scale(0.9)";
+    setTimeout(() => {
+      backdrop.remove();
+      toast.remove();
+    }, 300);
+  }, 3500);
 }
 
 // Tekli indirme butonu
@@ -213,22 +278,20 @@ document.getElementById("convertButton").addEventListener("click", async () => {
     currentTab?.url?.match(/\/view(\?|$)/);
 
   if (!isValidDriveUrl) {
-    // Aktif sekmeye script enjekte edebiliyor muyuz kontrol et
     try {
       await chrome.scripting.executeScript({
         target: { tabId: currentTab.id },
         function: showErrorToast,
         args: [
-          "Bu sayfa Google Drive PDF görüntüleyici değil.<br><br>Lütfen bir Google Drive PDF sayfasına gidin ve tekrar deneyin.",
+          "Bu eklenti sadece <b>Google Drive PDF Görüntüleyici</b> sayfalarında çalışır.",
         ],
       });
     } catch (e) {
-      // Chrome:// gibi sayfalarda script çalışmaz, popup'ta göster
       document.body.innerHTML = `
-        <div style="padding:20px;text-align:center;">
-          <div style="font-size:40px;margin-bottom:10px;">⚠️</div>
-          <div style="font-weight:600;margin-bottom:8px;color:#c00;">Geçersiz Sayfa!</div>
-          <div style="font-size:12px;color:#666;">Bu sayfada çalışamaz. Google Drive PDF sayfasına gidin.</div>
+        <div style="padding:40px 20px; text-align:center; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <div style="font-size:48px; margin-bottom:16px;">🚫</div>
+          <div style="font-weight:700; font-size:16px; margin-bottom:8px; color:#1e293b;">Çalıştırılamadı</div>
+          <div style="font-size:13px; color:#64748b; line-height:1.5;">Bu sayfada eklenti çalıştırılamaz.<br>Lütfen bir Google Drive sekmesine geçin.</div>
         </div>
       `;
       return;
@@ -237,7 +300,6 @@ document.getElementById("convertButton").addEventListener("click", async () => {
     return;
   }
 
-  // Geçerli Drive PDF - indir
   await chrome.scripting.executeScript({
     target: { tabId: currentTab.id },
     files: ["assets/jspdf.umd.min.js"],

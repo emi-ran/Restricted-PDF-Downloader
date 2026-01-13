@@ -15,6 +15,10 @@ let driveTabs = [];
     document.getElementById("statusText").textContent =
       "Açık Google Drive PDF sekmesi bulunamadı!";
     document.getElementById("startBtn").disabled = true;
+  } else {
+    document.getElementById(
+      "statusText"
+    ).textContent = `${driveTabs.length} adet PDF sekmesi bulundu. Başlatmaya hazır.`;
   }
 })();
 
@@ -32,15 +36,39 @@ function generatePdfBase64(speed) {
 
     const progressDiv = document.createElement("div");
     progressDiv.id = "pdf-batch-progress";
+
+    // Aynı modern stil
     progressDiv.style.cssText = `
-      position: fixed; top: 20px; right: 20px; min-width: 280px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white; padding: 16px; border-radius: 10px;
-      font-family: -apple-system, sans-serif; z-index: 999999;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      position: fixed; top: 20px; right: 20px; min-width: 300px;
+      background: white;
+      color: #1e293b; 
+      padding: 16px; border-radius: 12px;
+      font-family: -apple-system, system-ui, sans-serif; 
+      z-index: 2147483647;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; gap: 8px;
+      opacity: 0; transform: translateY(-20px);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     `;
-    progressDiv.innerHTML = `<div style="font-weight:600;margin-bottom:8px;">📄 ${documentName}</div><div id="pdf-batch-status">Yükleniyor...</div>`;
+
+    progressDiv.innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:20px;">📦</span>
+        <div style="display:flex; flex-direction:column; overflow:hidden;">
+          <div style="font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px;">${documentName}</div>
+          <div id="pdf-batch-status" style="font-size:12px; color:#64748b;">Hazırlanıyor...</div>
+        </div>
+      </div>
+    `;
+
     document.body.appendChild(progressDiv);
+
+    // Animasyonla göster
+    setTimeout(() => {
+      progressDiv.style.opacity = "1";
+      progressDiv.style.transform = "translateY(0)";
+    }, 10);
 
     const statusEl = document.getElementById("pdf-batch-status");
     const updateStatus = (text) => {
@@ -161,10 +189,8 @@ function generatePdfBase64(speed) {
 
       const pdfBase64 = doc.output("datauristring").split(",")[1];
 
-      progressDiv.style.background =
-        "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)";
-      updateStatus("✓ Tamamlandı!");
-      setTimeout(() => progressDiv.remove(), 1000);
+      updateStatus("✓ Hazır!");
+      setTimeout(() => progressDiv.remove(), 500);
 
       resolve({ pdfBase64, fileName: documentName });
     } catch (error) {
@@ -178,7 +204,7 @@ function generatePdfBase64(speed) {
 async function startBatchDownload() {
   const startBtn = document.getElementById("startBtn");
   startBtn.disabled = true;
-  startBtn.textContent = "İşleniyor...";
+  startBtn.textContent = "Hazırlanıyor...";
 
   const pdfFiles = [];
   let firstFileName = null;
@@ -214,6 +240,10 @@ async function startBatchDownload() {
         pdfFiles.push({ name: fileName + ".pdf", data: pdfBase64 });
         if (!firstFileName) firstFileName = fileName;
       }
+
+      // İşlem bitince hemen batch penceresine odaklan
+      chrome.runtime.sendMessage({ action: "focusBatchWindow" });
+      await new Promise((r) => setTimeout(r, 500)); // Biraz bekle
     } catch (err) {
       console.error(`Tab error:`, err);
     }
@@ -229,11 +259,19 @@ async function startBatchDownload() {
 
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(zipBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = (firstFileName || "pdf_collection") + ".zip";
-    a.click();
-    URL.revokeObjectURL(url);
+
+    // chrome.downloads API ile indir
+    chrome.downloads.download(
+      {
+        url: url,
+        filename: (firstFileName || "pdf_collection") + ".zip",
+        saveAs: true, // Kullanıcıya nereye kaydedeceğini sor
+      },
+      (downloadId) => {
+        // İndirme başladıktan sonra URL'i temizleyebiliriz ama hemen değil
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+    );
 
     updateStatus(`✓ Tamamlandı! ${pdfFiles.length} PDF indirildi.`, 100);
     startBtn.textContent = "✓ Tamamlandı";
