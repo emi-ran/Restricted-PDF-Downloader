@@ -1,9 +1,17 @@
 const SPEED = 200; // Hızlı mod
 let driveTabs = [];
+let isClassroomPage = false;
+let currentTab = null;
 
-// Sayfa yüklendiğinde Drive sekmelerini bul
+// Sayfa yüklendiğinde Drive sekmelerini bul ve Classroom kontrolü yap
 (async function init() {
   const tabs = await chrome.tabs.query({});
+  const activeTabs = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  currentTab = activeTabs[0];
+
   driveTabs = tabs.filter(
     (tab) =>
       tab.url?.startsWith("https://drive.google.com") &&
@@ -14,7 +22,84 @@ let driveTabs = [];
     document.getElementById("batchButton").style.display = "flex";
     document.getElementById("tabCount").textContent = driveTabs.length;
   }
+
+  // Classroom kontrolü - /w/ içeren URL'ler
+  isClassroomPage =
+    currentTab?.url?.startsWith("https://classroom.google.com") &&
+    currentTab?.url?.includes("/w/");
+
+  if (isClassroomPage) {
+    // Materyal sayısını al
+    try {
+      const result = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        function: countClassroomMaterials,
+      });
+      const count = result[0]?.result || 0;
+      if (count > 0) {
+        document.getElementById("classroomButton").style.display = "flex";
+        document.getElementById("materialCount").textContent = count;
+      }
+    } catch (e) {
+      console.error("Classroom sayısı alınamadı:", e);
+    }
+  }
 })();
+
+// Content script: Classroom materyallerini say
+function countClassroomMaterials() {
+  const materials = document.querySelectorAll(
+    'li.tfGBod[data-stream-item-type="5"]'
+  );
+  return materials.length;
+}
+
+// Content script: Tüm materyalleri yükle ve linklerini al
+function getAllClassroomMaterialLinks() {
+  return new Promise(async (resolve) => {
+    // "Daha fazla görüntüle" butonuna tıkla (varsa)
+    const loadMoreBtn = document.querySelector('button[jsname="t6Kl7b"]');
+    if (loadMoreBtn) {
+      loadMoreBtn.click();
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+
+    // Tüm materyalleri bul
+    const materials = document.querySelectorAll(
+      'li.tfGBod[data-stream-item-type="5"]'
+    );
+
+    // Her materyali genişlet (expand)
+    for (const material of materials) {
+      const expandBtn = material.querySelector(
+        '[jsname="rQC7Ie"][aria-expanded="false"]'
+      );
+      if (expandBtn) {
+        expandBtn.click();
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+
+    // Tüm materyallerin yüklenmesini bekle
+    await new Promise((r) => setTimeout(r, 1000));
+
+    // Tüm Drive linklerini topla
+    const links = [];
+    materials.forEach((material) => {
+      const driveLinks = material.querySelectorAll(
+        'a[href*="drive.google.com/file"]'
+      );
+      driveLinks.forEach((link) => {
+        const href = link.getAttribute("href");
+        if (href && !links.includes(href)) {
+          links.push(href);
+        }
+      });
+    });
+
+    resolve(links);
+  });
+}
 
 // Tekli indirme fonksiyonu (content script olarak çalışır)
 function runPdfDownload(speed) {
@@ -319,3 +404,57 @@ document.getElementById("batchButton").addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "openBatchWindow" });
   window.close();
 });
+
+// Classroom materyalleri butonu
+document
+  .getElementById("classroomButton")
+  .addEventListener("click", async () => {
+    if (!currentTab) return;
+
+    const btn = document.getElementById("classroomButton");
+    const originalText = btn.innerHTML;
+
+    // Loading state
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳ Materyaller yükleniyor...</span>`;
+    btn.style.opacity = "0.7";
+    btn.style.cursor = "not-allowed";
+
+    try {
+      const result = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        function: getAllClassroomMaterialLinks,
+      });
+
+      const links = result[0]?.result || [];
+
+      if (links.length === 0) {
+        btn.innerHTML = `<span>❌ Materyal bulunamadı</span>`;
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.style.cursor = "pointer";
+        }, 2000);
+        return;
+      }
+
+      btn.innerHTML = `<span>📂 ${links.length} sekme açılıyor...</span>`;
+
+      // Tüm linkleri yeni sekmelerde aç
+      for (const link of links) {
+        await chrome.tabs.create({ url: link, active: false });
+      }
+
+      window.close();
+    } catch (e) {
+      console.error("Materyaller açılamadı:", e);
+      btn.innerHTML = `<span>❌ Hata oluştu</span>`;
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.style.cursor = "pointer";
+      }, 2000);
+    }
+  });

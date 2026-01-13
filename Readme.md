@@ -6,6 +6,7 @@ Bu proje, Google Drive'da bulunan kısıtlı PDF belgelerini direkt olarak indir
 
 - **Tekli İndirme:** Aktif sekmede açık olan PDF belgesini anında indir
 - **Toplu İndirme:** Tüm açık Google Drive PDF sekmelerini tek seferde ZIP olarak indir
+- **Classroom Entegrasyonu:** Google Classroom sınıf çalışmaları sayfasındaki tüm materyalleri tek tıkla aç
 - Otomatik kaydırma ile tüm sayfaları yakalama
 - Modern ve kullanıcı dostu arayüz
 - Gerçek zamanlı ilerleme göstergesi
@@ -44,6 +45,17 @@ Birden fazla PDF'i aynı anda indirmek için:
 
 > ⚠️ **Önemli:** Toplu indirme sırasında açılan pencereyi kapatmayın ve sekmelere müdahale etmeyin.
 
+### Classroom Materyallerini Açma
+
+Google Classroom'daki tüm ders materyallerini tek seferde açmak için:
+
+1. Google Classroom'da bir dersin **Sınıf Çalışmaları** sayfasını açın (URL'de `/w/` olan sayfa).
+2. Uzantı ikonuna tıklayın.
+3. **"Tüm Materyalleri Aç"** butonu görünecektir (yanında materyal sayısı).
+4. Butona tıkladığınızda tüm materyaller otomatik olarak genişletilecek ve Drive linkleri yeni sekmelerde açılacaktır.
+
+> 💡 **İpucu:** Materyaller açıldıktan sonra **"Toplu İndir"** butonuyla hepsini tek ZIP olarak indirebilirsiniz.
+
 ## Nasıl Çalışır?
 
 Uzantı aşağıdaki adımları gerçekleştirir:
@@ -59,6 +71,19 @@ Uzantı aşağıdaki adımları gerçekleştirir:
 - Bu uygulama yalnızca eğitim amaçlıdır. Google Drive'daki içeriklerin indirilmesi veya kullanılmasıyla ilgili herhangi bir yasal sorumluluk kabul edilmez.
 - Lütfen sadece kendi dosyalarınızı indirin veya sahibinin izniyle içeriği kullanın.
 - Uzantı yalnızca Google Drive üzerinde görüntülenen PDF dosyalarını işleyebilir.
+
+## Sürüm Geçmişi
+
+### v1.5
+
+- Google Classroom entegrasyonu eklendi
+- Sınıf çalışmaları sayfasından tüm materyalleri tek tıkla açma özelliği
+
+### v1.4
+
+- Modern UI/UX iyileştirmeleri
+- Hata mesajları için blur backdrop efekti
+- Toast bildirimleri güncellendi
 
 ## İletişim
 

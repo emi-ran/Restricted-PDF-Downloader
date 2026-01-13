@@ -9,6 +9,8 @@
         --primary-dark: #2563eb;
         --secondary: #8b5cf6;
         --secondary-dark: #7c3aed;
+        --success: #10b981;
+        --success-dark: #059669;
         --bg: #ffffff;
         --text: #1e293b;
         --text-light: #64748b;
@@ -101,6 +103,14 @@
         );
       }
 
+      .btn-success {
+        background: linear-gradient(
+          135deg,
+          var(--success),
+          var(--success-dark)
+        );
+      }
+
       .badge {
         background: rgba(255, 255, 255, 0.2);
         padding: 2px 8px;
@@ -145,8 +155,13 @@
       <span class="badge" id="tabCount">0</span>
     </button>
 
+    <button id="classroomButton" class="btn btn-success" style="display: none">
+      <span>Tüm Materyalleri Aç</span>
+      <span class="badge" id="materialCount">0</span>
+    </button>
+
     <div class="footer">
-      <span>v1.4</span>
+      <span>v1.5</span>
       <a
         href="https://github.com/emi-ran/Restricted-PDF-Downloader"
         target="_blank"
