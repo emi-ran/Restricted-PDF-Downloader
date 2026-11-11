@@ -1,8 +1,30 @@
 const SPEED = 200; // Hızlı mod
 let driveTabs = [];
+const classroomTabId = Number(new URLSearchParams(location.search).get("classroomTabId"));
+let classroomLinks = [];
 
 // Sayfa yüklendiğinde Drive sekmelerini bul
 (async function init() {
+  if (classroomTabId) {
+    try {
+      const result = await chrome.scripting.executeScript({
+        target: { tabId: classroomTabId },
+        func: () => [...new Set([...document.querySelectorAll('a[href*="drive.google.com/file/d/"]')]
+          .filter(a => /\.pdf(?:\s|$)/i.test(a.innerText || a.getAttribute("aria-label") || ""))
+          .map(a => a.href))],
+      });
+      classroomLinks = result[0]?.result || [];
+      document.getElementById("tabCount").textContent = classroomLinks.length;
+      document.getElementById("statusText").textContent = classroomLinks.length
+        ? `${classroomLinks.length} PDF eki bulundu. Başlatmaya hazır.`
+        : "PDF eki bulunamadı. Classroom sayfasını yenileyip tekrar deneyin.";
+      document.getElementById("startBtn").disabled = !classroomLinks.length;
+    } catch (error) {
+      document.getElementById("statusText").textContent = "Classroom sayfası okunamadı. Sayfayı açık tutup tekrar deneyin.";
+      document.getElementById("startBtn").disabled = true;
+    }
+    return;
+  }
   const tabs = await chrome.tabs.query({});
   driveTabs = tabs.filter(
     (tab) =>
@@ -75,6 +97,11 @@ function generatePdfBase64(speed) {
       if (statusEl) statusEl.textContent = text;
     };
 
+    const readyDeadline = Date.now() + 30000;
+    while (!document.querySelector('img[src^="blob:https://drive.google.com/"]') && Date.now() < readyDeadline) {
+      await new Promise((r) => setTimeout(r, speed));
+    }
+
     let chosenElement = null;
     let maxHeight = 0;
     document.querySelectorAll("*").forEach((el) => {
@@ -95,7 +122,7 @@ function generatePdfBase64(speed) {
       );
     }
 
-    if (chosenElement) {
+    if (chosenElement && chosenElement.clientHeight > 0) {
       const totalHeight = chosenElement.scrollHeight;
       const scrollStep = chosenElement.clientHeight * 1.2;
       let currentScroll = 0;
@@ -140,7 +167,7 @@ function generatePdfBase64(speed) {
     }
 
     const loadedImages = getLoadedImages();
-    if (loadedImages.length === 0) {
+    if (loadedImages.length === 0 || (totalPages && loadedImages.length < totalPages)) {
       progressDiv.remove();
       resolve(null);
       return;
@@ -207,7 +234,27 @@ async function startBatchDownload() {
   startBtn.textContent = "Hazırlanıyor...";
 
   const pdfFiles = [];
+  const failedFiles = [];
   let firstFileName = null;
+  if (classroomTabId) {
+    const sourceTab = await chrome.tabs.get(classroomTabId);
+    for (const link of classroomLinks) {
+      try {
+        driveTabs.push(await chrome.tabs.create({ url: link, active: false, windowId: sourceTab.windowId }));
+      } catch (error) {
+        failedFiles.push(link);
+      }
+    }
+    if (driveTabs.length) {
+      try {
+        const groupId = await chrome.tabs.group({ tabIds: driveTabs.map((tab) => tab.id) });
+        await chrome.tabGroups.update(groupId, { title: "Classroom PDF", color: "blue" });
+      } catch (error) {
+        console.error("PDF sekmeleri gruplandırılamadı:", error);
+        updateStatus("Sekmeler gruplandırılamadı; indirme devam ediyor.");
+      }
+    }
+  }
 
   for (let i = 0; i < driveTabs.length; i++) {
     const tab = driveTabs[i];
@@ -220,6 +267,16 @@ async function startBatchDownload() {
     );
 
     try {
+      if (classroomTabId) {
+        const deadline = Date.now() + 30000;
+        let loaded = false;
+        while (Date.now() < deadline) {
+          const state = await chrome.tabs.get(tab.id);
+          if (state.status === "complete") { loaded = true; break; }
+          await new Promise((r) => setTimeout(r, 250));
+        }
+        if (!loaded) throw new Error("Drive sayfası yüklenemedi");
+      }
       await chrome.windows.update(tab.windowId, { focused: true });
       await chrome.tabs.update(tab.id, { active: true });
       await new Promise((r) => setTimeout(r, 500));
@@ -239,13 +296,18 @@ async function startBatchDownload() {
         const { pdfBase64, fileName } = result[0].result;
         pdfFiles.push({ name: fileName + ".pdf", data: pdfBase64 });
         if (!firstFileName) firstFileName = fileName;
+      } else {
+        failedFiles.push(tab.title || tab.url || "PDF");
       }
 
       // İşlem bitince hemen batch penceresine odaklan
-      chrome.runtime.sendMessage({ action: "focusBatchWindow" });
+      if (!classroomTabId) chrome.runtime.sendMessage({ action: "focusBatchWindow" });
       await new Promise((r) => setTimeout(r, 500)); // Biraz bekle
     } catch (err) {
-      console.error(`Tab error:`, err);
+      console.error("Tab error:", err);
+      failedFiles.push(tab.title || tab.url || "PDF");
+    } finally {
+      if (classroomTabId) await chrome.tabs.remove(tab.id).catch(() => {});
     }
   }
 
@@ -254,32 +316,39 @@ async function startBatchDownload() {
 
     const zip = new JSZip();
     for (const file of pdfFiles) {
-      zip.file(file.name, file.data, { base64: true });
+      let name = file.name.replace(/[\\/:*?"<>|]/g, "_");
+      const base = name.replace(/\.pdf$/i, "");
+      let suffix = 2;
+      while (zip.file(name)) name = `${base} (${suffix++}).pdf`;
+      zip.file(name, file.data, { base64: true });
     }
 
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(zipBlob);
 
     // chrome.downloads API ile indir
-    chrome.downloads.download(
-      {
-        url: url,
-        filename: (firstFileName || "pdf_collection") + ".zip",
-        saveAs: true, // Kullanıcıya nereye kaydedeceğini sor
-      },
-      (downloadId) => {
-        // İndirme başladıktan sonra URL'i temizleyebiliriz ama hemen değil
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-      }
-    );
+    try {
+      await chrome.downloads.download({
+        url,
+        filename: (firstFileName || "pdf_collection").replace(/[\\/:*?"<>|]/g, "_") + ".zip",
+        saveAs: true,
+      });
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      URL.revokeObjectURL(url);
+      updateStatus("ZIP indirilemedi: " + error.message, 0);
+      startBtn.textContent = "İndirme başarısız";
+      return;
+    }
 
-    updateStatus(`✓ Tamamlandı! ${pdfFiles.length} PDF indirildi.`, 100);
+    updateStatus(failedFiles.length
+      ? `ZIP hazır: ${pdfFiles.length} PDF, ${failedFiles.length} dosya başarısız: ${failedFiles.join(", ")}`
+      : `✓ Tamamlandı! ${pdfFiles.length} PDF indirildi.`, 100);
     startBtn.textContent = "✓ Tamamlandı";
     startBtn.classList.add("btn-success");
   } else {
-    updateStatus("Hiçbir PDF oluşturulamadı!", 0);
-    startBtn.disabled = false;
-    startBtn.textContent = `🚀 Tekrar Dene`;
+    updateStatus(`Hiçbir PDF oluşturulamadı. ${failedFiles.length} dosya başarısız.`, 0);
+    startBtn.textContent = "İşlem başarısız";
   }
 }
 

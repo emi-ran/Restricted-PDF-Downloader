@@ -23,6 +23,14 @@ Bu proje, Google Drive'da bulunan kısıtlı PDF belgelerini direkt olarak indir
 3. Sağ üst köşedeki **"Geliştirici Modu"** seçeneğini aktif edin.
 4. **"Paketlenmemiş uzantıyı yükle"** butonuna tıklayarak proje dizinini seçin.
 
+Yayın sayfasındaki `restricted-pdf-downloader.zip` dosyası da indirilebilir; ZIP'i çıkarıp oluşan klasörü paketlenmemiş uzantı olarak yükleyin.
+
+## CI ve sürüm yayınlama
+
+GitHub Actions her push ve pull request'te JavaScript sözdizimini, manifesti ve paket dosyalarını kontrol eder. `v1.6` gibi bir `v` etiketi gönderildiğinde, etiket `manifest.json` içindeki sürümle tam olarak eşleşmeli; kontroller geçerse GitHub otomatik sürüm notlarıyla bir release oluşturur ve yüklenebilir ZIP'i ekler. Sürüm notları commit ve pull request geçmişinden üretilir; gerektiğinde GitHub'da düzenlenebilir.
+
+Yayın için önce sürümü ve değişiklikleri commit'leyip gönderin, ardından eşleşen etiketi oluşturup gönderin. Etiketi göndermek release'i otomatik yayınlar; etiketin yeniden kullanılması mevcut release'i güncellemez.
+
 ## Kullanım
 
 ### Tekli İndirme
@@ -44,6 +52,14 @@ Birden fazla PDF'i aynı anda indirmek için:
 6. Uzantı sırayla her sekmeyi ziyaret edecek, PDF'leri oluşturacak ve tamamlandığında hepsini tek bir **ZIP dosyası** olarak indirecektir.
 
 > ⚠️ **Önemli:** Toplu indirme sırasında açılan pencereyi kapatmayın ve sekmelere müdahale etmeyin.
+
+### Classroom PDF eklerini ZIP olarak indirme
+
+1. Classroom'da bir materyalin ayrıntı sayfasını açın.
+2. Uzantıdan **PDF eklerini ZIP indir** seçeneğini, ardından **İşlemi Başlat** düğmesini seçin.
+3. İşlem penceresini ve Classroom sayfasını açık tutun. Uzantı PDF eklerini **Classroom PDF** adlı geçici bir sekme grubunda açıp sırayla işler ve tek ZIP olarak kaydeder. İşlenen sekmeler kapanır; son sekmeyle grup da kaybolur. Başarısız dosyalar işlem penceresinde belirtilir; ZIP eksik olabilir.
+
+Yalnızca sayfada PDF olarak görünen Drive ekleri işlenir. PDF'ler görüntülenen sayfalardan yeniden oluşturulur; orijinal metin ve kalite korunmayabilir. Yalnızca indirme ve kullanım izniniz olan dosyaları işleyin.
 
 ### Classroom Materyallerini Açma
 
@@ -73,6 +89,11 @@ Uzantı aşağıdaki adımları gerçekleştirir:
 - Uzantı yalnızca Google Drive üzerinde görüntülenen PDF dosyalarını işleyebilir.
 
 ## Sürüm Geçmişi
+
+### v1.6
+
+- Classroom materyal ayrıntılarındaki PDF eklerini tek ZIP olarak indirme.
+- Eksik sayfa veya işlenemeyen dosyaları bildirme ve aynı adlı dosyaları koruma.
 
 ### v1.5
 

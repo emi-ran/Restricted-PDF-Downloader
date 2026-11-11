@@ -4,17 +4,17 @@ let batchWindowId = null;
 // Mesaj dinle - popup'tan gelen "openBatchWindow" mesajı
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "openBatchWindow") {
-    if (batchWindowId !== null) {
+    if (batchWindowId !== null && !message.classroomTabId) {
       // Pencere zaten açıksa öne getir
       chrome.windows.update(batchWindowId, { focused: true }, (win) => {
         if (chrome.runtime.lastError) {
           // Pencere kapanmış, yeniden aç
           batchWindowId = null;
-          openBatchWindow();
+          openBatchWindow(message.classroomTabId);
         }
       });
     } else {
-      openBatchWindow();
+      openBatchWindow(message.classroomTabId);
     }
   } else if (message.action === "focusBatchWindow") {
     if (batchWindowId !== null) {
@@ -23,10 +23,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-function openBatchWindow() {
+function openBatchWindow(classroomTabId) {
   chrome.windows.create(
     {
-      url: chrome.runtime.getURL("batch.html"),
+      url: chrome.runtime.getURL("batch.html") + (classroomTabId ? `?classroomTabId=${classroomTabId}` : ""),
       type: "popup",
       width: 350,
       height: 380,

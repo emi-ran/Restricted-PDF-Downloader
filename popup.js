@@ -23,12 +23,26 @@ let currentTab = null;
     document.getElementById("tabCount").textContent = driveTabs.length;
   }
 
-  // Classroom kontrolü - /w/ içeren URL'ler
   isClassroomPage =
-    currentTab?.url?.startsWith("https://classroom.google.com") &&
-    currentTab?.url?.includes("/w/");
+    currentTab?.url?.startsWith("https://classroom.google.com/") &&
+    /\/(?:w\/|m\/[^/]+\/details)/.test(new URL(currentTab.url).pathname);
 
-  if (isClassroomPage) {
+  if (isClassroomPage && /\/m\/[^/]+\/details/.test(new URL(currentTab.url).pathname)) {
+    try {
+      const result = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        func: () => [...document.querySelectorAll('a[href*="drive.google.com/file/d/"]')]
+          .filter(a => /\.pdf(?:\s|$)/i.test(a.innerText || a.getAttribute("aria-label") || "")).length,
+      });
+      const count = result[0]?.result || 0;
+      if (count) {
+        document.getElementById("classroomZipButton").style.display = "flex";
+        document.getElementById("pdfCount").textContent = count;
+      }
+    } catch (error) {
+      console.error("Classroom ekleri okunamadı:", error);
+    }
+  } else if (isClassroomPage) {
     // Materyal sayısını al
     try {
       const result = await chrome.scripting.executeScript({
@@ -402,6 +416,11 @@ document.getElementById("convertButton").addEventListener("click", async () => {
 // Toplu indirme butonu
 document.getElementById("batchButton").addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "openBatchWindow" });
+  window.close();
+});
+
+document.getElementById("classroomZipButton").addEventListener("click", () => {
+  chrome.runtime.sendMessage({ action: "openBatchWindow", classroomTabId: currentTab.id });
   window.close();
 });
 
